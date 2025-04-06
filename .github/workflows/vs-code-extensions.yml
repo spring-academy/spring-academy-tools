@@ -1,0 +1,62 @@
+name: Build and Publish VS Code Extension Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      code-server-version:
+        description: Code Server Version (i.e. 4.12.0)
+        required: true
+      java-extension-package-version:
+        description: Java Extension Package Version (i.e. 0.25.14)
+        required: true
+
+jobs:
+  build-vscode-extension-package:
+    name: Java Extensions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v3
+
+      - name: Install Carvel tools
+        shell: bash
+        run: curl -L https://carvel.dev/install.sh | bash
+
+      - name: Install code-server
+        shell: bash
+        run: |
+          curl --fail -L -o code-server.tar.gz https://github.com/coder/code-server/releases/download/v${{github.event.inputs.code-server-version}}/code-server-${{github.event.inputs.code-server-version}}-linux-amd64.tar.gz
+          mkdir code-server
+          tar -C code-server --strip-components 1 -xvf code-server.tar.gz
+
+      - name: Install VS Code extensions
+        shell: bash
+        run: |
+          ./code-server/bin/code-server --install-extension vscjava.vscode-java-pack@${{github.event.inputs.java-extension-package-version}}
+          rm -f $HOME/.local/share/code-server/extensions/extensions.json
+
+      - name: Publish VS Code extensions as files
+        shell: bash
+        run: |
+          REPOSITORY_OWNER=${{github.repository_owner}}
+          imgpkg push \
+            -i ghcr.io/${REPOSITORY_OWNER,,}/vscode-java-extensions-amd64-files:latest \
+            -f $HOME/.local/share/code-server/extensions \
+            --registry-username=${{github.actor}} \
+            --registry-password=${{secrets.GHCR_TOKEN}}
+
+      - name: Login to GitHub container registry
+        uses: docker/login-action@v1
+        with:
+          username: ${{github.actor}}
+          password: ${{secrets.GHCR_TOKEN}}
+          registry: ghcr.io
+      - name: Tag latest image
+        shell: bash
+        run: |
+          REPOSITORY_OWNER=${{github.repository_owner}}
+          docker pull ghcr.io/${REPOSITORY_OWNER,,}/vscode-java-extensions-amd64-files:latest
+          docker tag  ghcr.io/${REPOSITORY_OWNER,,}/vscode-java-extensions-amd64-files:latest \
+                      ghcr.io/${REPOSITORY_OWNER,,}/vscode-java-extensions-amd64-files:${{github.event.inputs.java-extension-package-version}}
+          docker push ghcr.io/${REPOSITORY_OWNER,,}/vscode-java-extensions-amd64-files:${{github.event.inputs.java-extension-package-version}}
