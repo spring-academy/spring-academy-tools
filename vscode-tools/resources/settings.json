@@ -19,5 +19,6 @@
       "**/.factorypath": true
     },
     "java.compile.nullAnalysis.mode": "disabled",
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.jdt.ls.vmargs": "-Xmx256m -Xms128m -XX:MaxMetaspaceSize=128m"
   }
