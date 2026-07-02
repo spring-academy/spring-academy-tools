@@ -43,8 +43,8 @@ jobs:
       - name: Login to ghr.io
         uses: docker/login-action@v1
         with:
-          username: ${GITHUB_ACTOR}
-          password: ${{secrets.GHCR_TOKEN}}
+          username: ${{ github.actor }}
+          password: ${{secrets.GITHUB_TOKEN}}
           registry: ghcr.io
 
       - name: Publish package
